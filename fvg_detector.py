@@ -14,23 +14,6 @@ import plotly.graph_objects as go
 import pandas as pd
 import requests
 
-# Initialize the Dash app
-app = dash.Dash(__name__)
-
-# Define the app layout
-app.layout = html.Div([
-    dcc.Input(id='input-component', type='text', value=''),
-    dcc.Dropdown(
-        id='dropdown-component',
-        options=[
-            {'label': 'Option 1', 'value': 'option1'},
-            {'label': 'Option 2', 'value': 'option2'},
-            {'label': 'Option 3', 'value': 'option3'}
-        ],
-        value='option1'
-    ),
-    dcc.Graph(id='candlestick-chart'),
-])
 
 
 
@@ -57,29 +40,28 @@ df['t'] = pd.to_datetime(df['t'], unit='ms')
 df.set_index('t',inplace=True)
 
 
-@app.callback(
-    Output('candlestick-chart', 'figure'),
-    [Input('input-component', 'value'), Input('dropdown-component', 'value')]  # Inputs that trigger the callback
 
-)
-def update_candlestick_chart(input_value, dropdown_value):
-    print("callback called")
-    figure = go.Figure(data=[go.Candlestick(
-        x=df.index,
-        open=df['o'],
-        high=df['h'],
-        low=df['l'],
-        close=df['c']
-    )])
-    figure.update_layout(
-        title=f'Candlestick Chart for TQQQ',
-        xaxis_title='Date',
-        yaxis_title='Price',
-    )
-    return figure
+#pdb.set_trace()
 
 
-if __name__ == '__main__':
-    app.run_server(debug=True)
+def find_fvg(df):
+    row_number_candlestick_1 = 0
+    fvg_top = None
+    fvg_arr = [None, None, None]
+    for index, row in df.iterrows():
+        if row_number_candlestick_1  == len(df) - 3:  # Stop at the second-to-last index
+            break
+        row_number_candlestick_2 = row_number_candlestick_1 + 1
+        row_number_candlestick_3 = row_number_candlestick_1 + 2
+        if( df.iloc[row_number_candlestick_1]['h'] < df.iloc[row_number_candlestick_3]['l'] + 0.01):
+            fvg_top = df.iloc[row_number_candlestick_3]['l']
+            fvg_arr.append(fvg_top)
+        else:
+            fvg_arr.append(None)
+        row_number_candlestick_1 = row_number_candlestick_2
+    df['fvg_top'] = fvg_arr
+    return df
 
+#df = find_fvg(df)
 
+#print(df)

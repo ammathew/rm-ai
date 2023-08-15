@@ -14,6 +14,8 @@ import plotly.graph_objects as go
 import pandas as pd
 import requests
 
+from fvg_detector import find_fvg
+
 # Initialize the Dash app
 app = dash.Dash(__name__)
 
@@ -56,6 +58,10 @@ df = pd.DataFrame(data['results'])
 df['t'] = pd.to_datetime(df['t'], unit='ms')
 df.set_index('t',inplace=True)
 
+df = find_fvg(df)
+
+print("this is df")
+print(df)
 
 @app.callback(
     Output('candlestick-chart', 'figure'),
