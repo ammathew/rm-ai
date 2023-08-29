@@ -64,25 +64,50 @@ print("this is df")
 print(df)
 
 @app.callback(
-    Output('candlestick-chart', 'figure'),
+    #Output('candlestick-chart', 'figure'),
+    Output('combined-chart', 'figure'),
     [Input('input-component', 'value'), Input('dropdown-component', 'value')]  # Inputs that trigger the callback
 
 )
-def update_candlestick_chart(input_value, dropdown_value):
+def update_combined_chart(input_value, dropdown_value):
     print("callback called")
+    scatter_trace = go.Scatter(
+        x=df.index,
+        y=df['fvg_top'],
+        mode='markers'
+    )
     figure = go.Figure(data=[go.Candlestick(
         x=df.index,
         open=df['o'],
         high=df['h'],
         low=df['l'],
         close=df['c']
-    )])
+    ),scatter_trace])
+
+
     figure.update_layout(
         title=f'Candlestick Chart for TQQQ',
         xaxis_title='Date',
         yaxis_title='Price',
     )
     return figure
+
+
+# def update_candlestick_chart(input_value, dropdown_value):
+#     print("callback called")
+#     figure = go.Figure(data=[go.Candlestick(
+#         x=df.index,
+#         open=df['o'],
+#         high=df['h'],
+#         low=df['l'],
+#         close=df['c']
+#     )])
+#     figure.update_layout(
+#         title=f'Candlestick Chart for TQQQ',
+#         xaxis_title='Date',
+#         yaxis_title='Price',
+#     )
+#     return figure
 
 
 if __name__ == '__main__':
