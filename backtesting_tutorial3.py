@@ -21,6 +21,7 @@ import talib
 
 import pdb
 
+
 def indicator(data):
    return data.Close.s.pct_change(periods=7) * 100
 
@@ -47,7 +48,6 @@ def find_fvg(data):
             fvg_arr.append(0)
         row_number_candlestick_1 = row_number_candlestick_2
 
-    #pdb.set_trace()
     return fvg_arr
         
     
@@ -70,23 +70,70 @@ def find_fvg(data):
     # df['fvg_top'] = fvg_arr
     # return df
 
+
+
+def get_swing_highs_arr(data):
+    length_data = data.High.shape[0]
+    last_swing_high = data.High[0]
+    swing_high_arr = []
+    for i in range(1, length_data - 1 ):
+        if( (data.High[i-1] <  data.High[i]) and
+            ( data.High[i+1] < data.High[i] )
+           ):
+            last_swing_high = data.High[i]
+        swing_high_arr.append(last_swing_high)
+    swing_high_arr.append(last_swing_high)
+    swing_high_arr.append(last_swing_high)
+
+    return swing_high_arr
+
+
+
+
+def add_swing_high_column(data):
+    length_data = len(data['High'])
+    last_swing_high = data['High'][0]
+    data["Last Swing High"] = np.zeros(length_data)
+    data["Last Swing High"][0] = last_swing_high
+    for i in range(1, length_data - 1 ):
+        if( (data['High'][i-1] <  data['High'][i]) and
+            ( data['High'][i+1] < data['High'][i] )
+           ):
+            last_swing_high = data['High'][i]
+        data["Last Swing High"][i] = last_swing_high
+    data["Last Swing High"][-1] = last_swing_high
+    return data
+
+
+def get_swing_low_col():
+    pass
+
 class MomentumStrategy(Strategy):
 
     def init(self):
         self.find_fvg = self.I(find_fvg, self.data)
-        print("THIS IS FVG")
-        print(self.find_fvg)
+        self.swing_highs = self.I(get_swing_highs_arr, self.data)
+        
+        
+        #print("SWING HIGHS")
+        #print(self.data.swing_highs)
          
     def next(self):
         is_fvg = self.find_fvg[-1]
-        if(is_fvg):
-            if(self.position):
-                self.position.close()
-            self.buy()
-            print("bought!")
-        else:
-            print("not bought")
+        print("is fvg")
+        print(is_fvg)
+        ## need to get last swing high and last swing low, if above or below, sell.
+        # also later do risk management on this basis: only 1:1's
 
+        if(self.position):
+            if(self.data.Open[-1] > self.swing_highs[-1]):
+                self.position.close()
+                print("POSITION CLOSED")
+        if(is_fvg):
+            self.buy()
+            print("BOUGHT")
+        else:
+            pass
 
 
 
