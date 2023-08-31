@@ -22,10 +22,13 @@ import talib
 import pdb
 
 
-def get_last_fvg_arr(data):
+def get_last_fvg_arrays(data):
    row_number_candlestick_1 = 0
    fvg_top = None
-   fvg_arr = [None, None, None]
+   fvg_bottom = None
+   fvg_arr_top = [None, None, None]
+   fvg_arr_bottom = [None, None, None]
+
 
    rows = data.Open.shape[0]
 
@@ -37,17 +40,29 @@ def get_last_fvg_arr(data):
 
       if( data.High[row_number_candlestick_1] < data.Low[row_number_candlestick_3] + 0.01
           and data.Low[row_number_candlestick_2] < data.High[row_number_candlestick_2]
-          and data.Open[row_number_candlestick_2] < data.Close[row_number_candlestick_1]
-          and data.Close[row_number_candlestick_2] < data.Open[row_number_candlestick_3]
+          #and data.Open[row_number_candlestick_2] < data.Close[row_number_candlestick_1]
+          #and data.Close[row_number_candlestick_2] < data.Open[row_number_candlestick_3]
          ):
          fvg_top = data.Low[row_number_candlestick_3]
+         fvg_bottom = data.High[row_number_candlestick_1]
       elif(fvg_top and data.Low[row_number_candlestick_3] <  fvg_top):
          fvg_top = None
-      fvg_arr.append(fvg_top)
+         fvg_bottom = None
+      fvg_arr_top.append(fvg_top)
+      fvg_arr_bottom.append(fvg_bottom)
            
       row_number_candlestick_1 = row_number_candlestick_2
 
-   return fvg_arr
+   return fvg_arr_top, fvg_arr_bottom
+
+
+def get_last_fvg_top_array(data):
+   arr = get_last_fvg_arrays(data)
+   return arr[0]
+
+def get_last_fvg_bottom_array(data):
+   arr = get_last_fvg_arrays(data)
+   return arr[1]
 
 
 def get_swing_highs_arr(data):
@@ -93,25 +108,14 @@ class MomentumStrategy(Strategy):
     def init(self):
         self.swing_highs = self.I(get_swing_highs_arr, self.data, color="blue")
         self.swing_lows = self.I(get_swing_lows_arr, self.data, color="yellow")
-        self.last_fvg_arr = self.I(get_last_fvg_arr, self.data, overlay=True, color='red')
-        self.lows = self.I(get_lows, self.data, overlay=True)
+        self.last_fvg_arr_top = self.I(get_last_fvg_top_array, self.data, overlay=True, color='red')
+        self.last_fvg_arr_bottom = self.I(get_last_fvg_bottom_array, self.data, overlay=True, color='red')
+   
+        self.lows = self.I(get_lows, self.data, overlay=False)
 
-        print("SWING Lows")
-        print(self.swing_lows)
          
     def next(self):
-        last_fvg = self.last_fvg_arr[-1]
-        ## need to get last swing high and last swing low, if above or below, sell.
-        # also later do risk management on this basis: only 1:1's
-        # if(self.position):
-        #    if(self.data.High[-1] > self.swing_highs[-1]):
-        #       self.position.close()
-        #       #print(f"POSITION CLOSED at {self.data.Open[-1] } at {self.data.index[-1]}")
-        #    elif(self.data.Low[-1] < self.swing_lows[-1]):
-        #       self.position.close()
-
-        print(self.lows[-1])
-        print(self.last_fvg_arr[-1])
+        last_fvg = self.last_fvg_arr_top[-1]
 
         if(last_fvg and self.lows[-1] < last_fvg):
            try:
@@ -121,18 +125,7 @@ class MomentumStrategy(Strategy):
               self.swing_lows[-1]
                
               pass
-            
-              
-        # if(last_fvg and self.data.Low[-1] < last_fvg):
-        #    try:
-        #       #self.buy(sl=self.swing_lows[-1], tp=self.swing_highs[-1], limit=last_fvg-.03, stop=last_fvg+.03)
-        #       self.buy(sl=self.swing_lows[-1], tp=self.swing_highs[-1])
-
-        #       print(f"BOUGHT at {self.data.Open[-1]} at {self.data.index[-1]}")
-        #    except:
-        #       pass
-         
-
+ 
 
 import pdb
 
