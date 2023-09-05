@@ -117,9 +117,11 @@ class MomentumStrategy(Strategy):
     def next(self):
         last_fvg = self.last_fvg_arr_top[-1]
 
-        if(last_fvg and self.lows[-1] < last_fvg):
+        if(last_fvg
+           and self.lows[-1] < last_fvg
+           and self.lows[-1] >= self.last_fvg_arr_bottom[-1]):
            try:
-              self.buy(sl=self.swing_lows[-1], tp=self.swing_highs[-1]) #in a try/catch be cause in many cases swing low is greater than price backtesting.py is trying to buy at)
+              self.buy(sl=self.swing_lows[-1], tp=self.swing_highs[-1], limit=last_fvg, stop=last_fvg-1) #in a try/catch be cause in many cases swing low is greater than price backtesting.py is trying to buy at)
            except:
               print("EXCEPTED")
               self.swing_lows[-1]
