@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 
 from bokeh.models.tools import Toolbar
+import pdb
 
 
 # Generate some sample price data
@@ -38,19 +39,34 @@ def get_last_fvg_arrays(data):
       row_number_candlestick_2 = row_number_candlestick_1 + 1
       row_number_candlestick_3 = row_number_candlestick_1 + 2
 
+      if (fvg_arr_top[-1] and fvg_arr_bottom[-1] ):
+         if(data.Low[row_number_candlestick_3] < fvg_arr_bottom[-1]):
+            fvg_bottom = None
+            fvg_top = None
+         elif(data.Low[row_number_candlestick_3] < fvg_arr_top[-1]):
+            fvg_top = data.Low[row_number_candlestick_3]
+            fvg_bottom = fvg_arr_bottom[-1]
+         else:
+            fvg_top = fvg_arr_top[-1]
+            bottom = fvg_arr_bottom[-1]
+
+
       if( data.High[row_number_candlestick_1] < data.Low[row_number_candlestick_3] + 0.01
           and data.Low[row_number_candlestick_2] < data.High[row_number_candlestick_2]
-          #and data.Open[row_number_candlestick_2] < data.Close[row_number_candlestick_1]
-          #and data.Close[row_number_candlestick_2] < data.Open[row_number_candlestick_3]
          ):
-         fvg_top = data.Low[row_number_candlestick_3]
-         fvg_bottom = data.High[row_number_candlestick_1]
-      elif(fvg_top and data.Low[row_number_candlestick_3] <  fvg_top):
-         fvg_top = None
-         fvg_bottom = None
+
+         if((data.Low[row_number_candlestick_3] - data.High[row_number_candlestick_1]) > 1):   
+            fvg_top = data.Low[row_number_candlestick_3]
+            fvg_bottom = data.High[row_number_candlestick_1]
+            print("GOT HERE")
+
+
       fvg_arr_top.append(fvg_top)
       fvg_arr_bottom.append(fvg_bottom)
-           
+      print(fvg_arr_top)
+      print(fvg_arr_bottom)
+
+      
       row_number_candlestick_1 = row_number_candlestick_2
 
    return fvg_arr_top, fvg_arr_bottom
@@ -113,28 +129,42 @@ class MomentumStrategy(Strategy):
    
         self.lows = self.I(get_lows, self.data, overlay=False)
 
+
+        self.EMA10 = self.I(talib.EMA, self.data.High, timeperiod=100, overlay=True)
+        self.EMA5 = self.I(talib.EMA, self.data.High, timeperiod=50, overlay=True)
+        print("self.EMA10")
+
+        print(self.EMA10)
+
+       # pdb.set_trace()
          
     def next(self):
         last_fvg = self.last_fvg_arr_top[-1]
-
-        if(last_fvg and self.lows[-1] < last_fvg):
-           try:
-              self.buy(sl=self.swing_lows[-1], tp=self.swing_highs[-1]) #in a try/catch be cause in many cases swing low is greater than price backtesting.py is trying to buy at)
-           except:
-              print("EXCEPTED")
-              self.swing_lows[-1]
-               
-              pass
- 
+        
+        if( crossover(self.EMA5, self.EMA10) ):
+           print( "CROSSED!")
+           if(last_fvg
+              and self.lows[-1] <= last_fvg
+              and self.lows[-1] >= self.last_fvg_arr_bottom[-1]):
+              try:
+                 reward = self.swing_highs[-1] - last_fvg
+                 risk = last_fvg - self.swing_lows[-1]
+                 if reward > (risk*1):
+                    self.buy(sl=self.swing_lows[-1], tp=self.swing_highs[-1], limit=last_fvg, stop=last_fvg-1) #in a try/catch be cause in many cases swing low is greater than price backtesting.py is trying to buy at)
+              except:
+                 print("EXCEPTED")
+                 self.swing_lows[-1]
+                 pass
+            
 
 import pdb
 
 
-price_data = GOOG.truncate(before=pd.Timestamp("2010-01-28"), after=pd.Timestamp("2011-05-05"))
+price_data = GOOG.truncate(before=pd.Timestamp("2004-01-28"), after=pd.Timestamp("2006-05-05"))
 
 
 bt = Backtest(price_data, MomentumStrategy , cash=10_000)
 
 results = bt.run()
-print(results._strategy)
+print(results)
 bt.plot()
