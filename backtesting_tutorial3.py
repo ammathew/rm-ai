@@ -9,6 +9,8 @@ import numpy as np
 
 from bokeh.models.tools import Toolbar
 
+import pdb
+import json
 
 # Generate some sample price data
 np.random.seed(42)
@@ -21,6 +23,29 @@ import talib
 
 import pdb
 
+
+def get_data(file_path):
+    try:
+        with open(file_path, "r") as file:
+            data = json.load(file)  # Load JSON data from the file
+            #print(data)
+            return data
+    except FileNotFoundError:
+        print(f"File '{file_path}' not found.")
+    except json.JSONDecodeError as e:
+        print(f"Error decoding JSON: {e}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
+
+data = get_data('data.txt')
+data = pd.DataFrame(data['results'])
+data = data.drop(['v','vw','n'], axis=1)
+new_column_names = ['Open', 'Close', 'High', 'Low', 'Time']
+data.columns = new_column_names
+data.Time = pd.to_datetime(data.Time, unit='ms')
+data = data.set_index('Time')
 
 def get_last_fvg_arrays(data):
    row_number_candlestick_1 = 0
@@ -38,7 +63,7 @@ def get_last_fvg_arrays(data):
       row_number_candlestick_2 = row_number_candlestick_1 + 1
       row_number_candlestick_3 = row_number_candlestick_1 + 2
 
-      if( data.High[row_number_candlestick_1] < data.Low[row_number_candlestick_3] + 0.01
+      if( data.High[row_number_candlestick_1] < data.Low[row_number_candlestick_3] + .07
           and data.Low[row_number_candlestick_2] < data.High[row_number_candlestick_2]
           #and data.Open[row_number_candlestick_2] < data.Close[row_number_candlestick_1]
           #and data.Close[row_number_candlestick_2] < data.Open[row_number_candlestick_3]
@@ -103,7 +128,7 @@ def get_lows(data):
 
    return lows
 
-class MomentumStrategy(Strategy):
+class FVGStrategy(Strategy):
 
     def init(self):
         self.swing_highs = self.I(get_swing_highs_arr, self.data, color="blue")
@@ -120,8 +145,14 @@ class MomentumStrategy(Strategy):
         if(last_fvg
            and self.lows[-1] < last_fvg
            and self.lows[-1] >= self.last_fvg_arr_bottom[-1]):
+           #SL = min(self.swing_lows[-1], last_fvg-.10)
+           #print("THIS IS SL")
+           #print(SL)
            try:
-              self.buy(sl=self.swing_lows[-1], tp=self.swing_highs[-1], limit=last_fvg, stop=last_fvg-1) #in a try/catch be cause in many cases swing low is greater than price backtesting.py is trying to buy at)
+              reward = self.swing_highs[-1] - last_fvg
+              risk = last_fvg - self.swing_lows[-1]
+              if reward > (risk*1):
+                 self.buy(sl=self.swing_lows[-1] , tp=self.swing_highs[-1], limit=last_fvg) #in a try/catch be cause in many cases swing low is greater than price backtesting.py is trying to buy at)
            except:
               print("EXCEPTED")
               self.swing_lows[-1]
@@ -132,11 +163,12 @@ class MomentumStrategy(Strategy):
 import pdb
 
 
-price_data = GOOG.truncate(before=pd.Timestamp("2010-01-28"), after=pd.Timestamp("2011-05-05"))
+#price_data = GOOG.truncate(before=pd.Timestamp("2010-01-28"), after=pd.Timestamp("2011-05-05"))
 
+price_data = data
 
-bt = Backtest(price_data, MomentumStrategy , cash=10_000)
+bt = Backtest(price_data, FVGStrategy , cash=10_000)
 
 results = bt.run()
-print(results._strategy)
+print(results)
 bt.plot()
